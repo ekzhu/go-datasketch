@@ -1,8 +1,8 @@
 // Implementation of MinHash with random permutation functions.
-
+//
 // The original MinHash paper:
 // http://cs.brown.edu/courses/cs253/papers/nearduplicate.pdf
-
+//
 // The b-Bit MinWise Hashing:
 // http://research.microsoft.com/pubs/120078/wfc0398-lips.pdf
 // paper explains the idea behind the one-bit MinHash and storage space saving.
