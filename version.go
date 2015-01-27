@@ -1,3 +1,3 @@
-package streamsimilarity
+package sketchsimilarity
 
 const Version = "development"
