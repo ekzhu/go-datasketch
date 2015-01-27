@@ -56,21 +56,21 @@ type MinHash struct {
 
 // Create a new MinHash signature.
 // `seed` is used to generate random permutation functions.
-// `numHashFunctions` number of permuation functions will
+// `numPerm` number of permuation functions will
 // be generated.
 // Higher number of permutations results in better estimation,
 // but reduces performance. 128 is a good number to start.
-func New(seed int64, numHashFunctions int) (*MinHash, error) {
-	if numHashFunctions <= 0 {
+func New(seed int64, numPerm int) (*MinHash, error) {
+	if numPerm <= 0 {
 		return nil, errors.New("Cannot have non-positive number of permutations")
 	}
 	s := new(MinHash)
-	s.HashValues = make([]uint32, numHashFunctions)
-	s.Permutations = make([]permutation, numHashFunctions)
+	s.HashValues = make([]uint32, numPerm)
+	s.Permutations = make([]permutation, numPerm)
 	s.Seed = seed
 	rand.Seed(s.Seed)
 	var a uint32
-	for i := 0; i < numHashFunctions; i++ {
+	for i := 0; i < numPerm; i++ {
 		s.HashValues[i] = math.MaxUint32
 		for {
 			a = rand.Uint32()
@@ -141,8 +141,9 @@ type OneBitMinHash struct {
 
 // Export the full MinHash signature to OneBitMinHash.
 // Keeping only the lowest bit of every hash value.
-// If the number of hash functions exceeds the maximum size
-// of the bit array `BIT_ARRAY_SIZE`, only the first
+// If the number of hash permutation functions exceeds
+// the maximum size of the bit array `BIT_ARRAY_SIZE`,
+// only the first
 // `BIT_ARRAY_SIZE` number of hash values will be exported.
 func (sig *MinHash) ExportOneBit() *OneBitMinHash {
 	var numExportedHashValues int
@@ -163,7 +164,7 @@ func (sig *MinHash) ExportOneBit() *OneBitMinHash {
 }
 
 // Estimate Jaccard similarity of OneBitMinHash signatures
-func EstimateJaccardOnBit(sigs ...*OneBitMinHash) (float64, error) {
+func EstimateJaccardOneBit(sigs ...*OneBitMinHash) (float64, error) {
 	if sigs == nil || len(sigs) == 0 {
 		return 0.0, errors.New("Less than 2 OneBitMinHash signatures were given")
 	}
