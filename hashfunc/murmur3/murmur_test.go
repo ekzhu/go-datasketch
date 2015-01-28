@@ -5,6 +5,8 @@ import (
 	"testing"
 )
 
+var seed uint32 = 0
+
 var data = []struct {
 	h32   uint32
 	h64_1 uint64
@@ -21,7 +23,7 @@ var data = []struct {
 func TestRef(t *testing.T) {
 	for _, elem := range data {
 
-		var h32 hash.Hash32 = New32()
+		var h32 hash.Hash32 = New32(seed)
 		h32.Write([]byte(elem.s))
 		if v := h32.Sum32(); v != elem.h32 {
 			t.Errorf("'%s': 0x%x (want 0x%x)", elem.s, v, elem.h32)
@@ -55,7 +57,7 @@ func TestRef(t *testing.T) {
 
 func TestIncremental(t *testing.T) {
 	for _, elem := range data {
-		h32 := New32()
+		h32 := New32(seed)
 		h128 := New128()
 		for i, j, k := 0, 0, len(elem.s); i < k; i = j {
 			j = 2*i + 3
@@ -144,7 +146,7 @@ func benchPartial32(b *testing.B, length int) {
 
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		hasher := New32()
+		hasher := New32(seed)
 		hasher.Write(buf[0:start])
 
 		for j := start; j+k <= length; j += k {

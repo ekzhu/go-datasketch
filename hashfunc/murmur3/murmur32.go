@@ -24,8 +24,9 @@ type digest32 struct {
 	h1 uint32 // Unfinalized running hash.
 }
 
-func New32() hash.Hash32 {
+func New32(s uint32) hash.Hash32 {
 	d := new(digest32)
+	d.h1 = s
 	d.bmixer = d
 	d.Reset()
 	return d
@@ -153,9 +154,9 @@ func Sum32(data []byte) uint32 {
 	return h1
 }
 
-// Sum32_Seed is the same as Sum32 except random seed can be used to
+// The same as Sum32 except random seed can be used to
 // generate different hash functions given different seeds.
-func Sum32_Seed(data []byte, seed uint32) uint32 {
+func Sum32Seed(data []byte, seed uint32) uint32 {
 
 	var h1 uint32 = seed
 
