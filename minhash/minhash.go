@@ -10,6 +10,7 @@ package minhash
 
 import (
 	"errors"
+	"hash"
 	"math"
 	"math/big"
 	"math/rand"
@@ -89,7 +90,8 @@ func New(seed int64, numPerm int) (*MinHash, error) {
 // Using a good hash function is decisive in estimation accuracy. See
 // http://programmers.stackexchange.com/a/145633.
 // You can use the murmur3 hash function in /hashfunc/murmur3 directory.
-func (sig *MinHash) Digest(hv uint32) {
+func (sig *MinHash) Digest(item hash.Hash32) {
+	hv := item.Sum32()
 	var phv uint32
 	for i := range sig.Permutations {
 		phv = (sig.Permutations[i])(hv)
