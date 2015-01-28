@@ -31,10 +31,11 @@ type digest128 struct {
 	h2 uint64 // Unfinalized running hash part 2.
 }
 
-func New128() Hash128 {
+func New128(s1, s2 uint64) Hash128 {
 	d := new(digest128)
+	d.h1 = s1
+	d.h2 = s2
 	d.bmixer = d
-	d.Reset()
 	return d
 }
 
