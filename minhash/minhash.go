@@ -1,4 +1,5 @@
-// Implementation of MinHash with random permutation functions.
+// Package minhash implements a probabilistic data structure for computing the
+// similarity between datasets.
 //
 // The original MinHash paper:
 // http://cs.brown.edu/courses/cs253/papers/nearduplicate.pdf
@@ -10,17 +11,21 @@ package minhash
 
 import (
 	"errors"
-	"hash"
 	"math"
 	"math/big"
 	"math/rand"
 )
 
+// Hash32 is a relaxed version of hash.Hash32
+type Hash32 interface {
+	Sum32() uint32
+}
+
 const (
 	// The maximum size (in bit) for the 1-bit minhash
-	BIT_ARRAY_SIZE = 128
-	onebitMask     = uint32(0x1)
-	mersennePrime  = (1 << 61) - 1
+	bitArraySize  = 128
+	onebitMask    = uint32(0x1)
+	mersennePrime = (1 << 61) - 1
 )
 
 func popCount(bits uint32) uint32 {
@@ -55,7 +60,7 @@ type MinHash struct {
 	Seed         int64
 }
 
-// Create a new MinHash signature.
+// New creates a new MinHash signature.
 // `seed` is used to generate random permutation functions.
 // `numPerm` number of permuation functions will
 // be generated.
@@ -85,12 +90,12 @@ func New(seed int64, numPerm int) (*MinHash, error) {
 	return s, nil
 }
 
-// Consumes a 32-bit hash and then computes all permutations and retains
+// Digest consumes a 32-bit hash and then computes all permutations and retains
 // the minimum value for each permutations.
 // Using a good hash function is decisive in estimation accuracy. See
 // http://programmers.stackexchange.com/a/145633.
 // You can use the murmur3 hash function in /hashfunc/murmur3 directory.
-func (sig *MinHash) Digest(item hash.Hash32) {
+func (sig *MinHash) Digest(item Hash32) {
 	hv := item.Sum32()
 	var phv uint32
 	for i := range sig.Permutations {
@@ -101,7 +106,8 @@ func (sig *MinHash) Digest(item hash.Hash32) {
 	}
 }
 
-// Compute the estimation of Jaccard Similarity among MinHash signatures.
+// EstimateJaccard computes the estimation of Jaccard Similarity among
+// MinHash signatures.
 func EstimateJaccard(sigs ...*MinHash) (float64, error) {
 	if sigs == nil || len(sigs) == 0 {
 		return 0.0, errors.New("Less than 2 MinHash signatures were given")
@@ -130,6 +136,7 @@ func EstimateJaccard(sigs ...*MinHash) (float64, error) {
 	return float64(intersection) / float64(numPerm), nil
 }
 
+// OneBitMinHash signature.
 // For b-Bit MinHash see:
 // http://research.microsoft.com/pubs/120078/wfc0398-lips.pdf
 // This is the 1-bit signature that can be used to compute
@@ -142,16 +149,16 @@ type OneBitMinHash struct {
 	Seed     int64
 }
 
-// Export the full MinHash signature to OneBitMinHash.
+// ExportOneBit exports the full MinHash signature to OneBitMinHash.
 // Keeping only the lowest bit of every hash value.
 // If the number of hash permutation functions exceeds
-// the maximum size of the bit array `BIT_ARRAY_SIZE`,
+// the maximum size of the bit array `bitArraySize`,
 // only the first
-// `BIT_ARRAY_SIZE` number of hash values will be exported.
+// `bitArraySize` number of hash values will be exported.
 func (sig *MinHash) ExportOneBit() *OneBitMinHash {
 	var numExportedHashValues int
-	if len(sig.Permutations) > BIT_ARRAY_SIZE {
-		numExportedHashValues = BIT_ARRAY_SIZE
+	if len(sig.Permutations) > bitArraySize {
+		numExportedHashValues = bitArraySize
 	} else {
 		numExportedHashValues = len(sig.Permutations)
 	}
@@ -166,7 +173,7 @@ func (sig *MinHash) ExportOneBit() *OneBitMinHash {
 	return &sigOneBit
 }
 
-// Estimate Jaccard similarity of OneBitMinHash signatures
+// EstimateJaccardOneBit estimates Jaccard similarity of OneBitMinHash signatures
 func EstimateJaccardOneBit(sigs ...*OneBitMinHash) (float64, error) {
 	if sigs == nil || len(sigs) == 0 {
 		return 0.0, errors.New("Less than 2 OneBitMinHash signatures were given")

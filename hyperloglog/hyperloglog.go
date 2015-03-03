@@ -1,7 +1,9 @@
+// Package hyperloglog implements a probabilistic data structure for estimating
+// cardinality and similarity.
 // HyperLogLog is described here:
-// http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf
+// http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf.
 // The code is shamelessly copied (with some modification) from
-// https://github.com/clarkduvall/hyperloglog
+// https://github.com/clarkduvall/hyperloglog.
 // Jaccard similarity measure is computed using Inclusion-Exclusion
 // principle.
 package hyperloglog
@@ -12,6 +14,7 @@ import (
 
 const two32 = 1 << 32
 
+// HyperLogLog data structure
 type HyperLogLog struct {
 	Reg []uint8
 	M   uint32
@@ -68,7 +71,7 @@ func (h *HyperLogLog) Count() float64 {
 	return correction(est, float64(h.M), h.Reg)
 }
 
-// Return the cardinality of the union
+// Union returns the cardinality of the union
 func (h *HyperLogLog) Union(other *HyperLogLog) (float64, error) {
 	if h.P != other.P {
 		return 0.0, errors.New("must have the same precision to compute Jaccard")

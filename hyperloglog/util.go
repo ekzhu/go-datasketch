@@ -4,6 +4,7 @@ import (
 	"math"
 )
 
+// Hash32 is a relaxed version of hash.Hash32
 type Hash32 interface {
 	Sum32() uint32
 }
