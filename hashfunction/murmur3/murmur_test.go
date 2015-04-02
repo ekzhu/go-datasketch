@@ -5,7 +5,8 @@ import (
 	"testing"
 )
 
-var seed uint32 = 0
+var seed uint32
+var seed64 uint64
 
 var data = []struct {
 	h32   uint32
@@ -29,11 +30,11 @@ func TestRef(t *testing.T) {
 			t.Errorf("'%s': 0x%x (want 0x%x)", elem.s, v, elem.h32)
 		}
 
-		if v := Sum32([]byte(elem.s)); v != elem.h32 {
+		if v := Sum32([]byte(elem.s), seed); v != elem.h32 {
 			t.Errorf("'%s': 0x%x (want 0x%x)", elem.s, v, elem.h32)
 		}
 
-		var h64 hash.Hash64 = New64()
+		var h64 hash.Hash64 = New64(seed64)
 		h64.Write([]byte(elem.s))
 		if v := h64.Sum64(); v != elem.h64_1 {
 			t.Errorf("'%s': 0x%x (want 0x%x)", elem.s, v, elem.h64_1)
@@ -43,7 +44,7 @@ func TestRef(t *testing.T) {
 			t.Errorf("'%s': 0x%x (want 0x%x)", elem.s, v, elem.h64_1)
 		}
 
-		var h128 Hash128 = New128()
+		var h128 Hash128 = New128(seed64, seed64)
 		h128.Write([]byte(elem.s))
 		if v1, v2 := h128.Sum128(); v1 != elem.h64_1 || v2 != elem.h64_2 {
 			t.Errorf("'%s': 0x%x-0x%x (want 0x%x-0x%x)", elem.s, v1, v2, elem.h64_1, elem.h64_2)
@@ -58,7 +59,7 @@ func TestRef(t *testing.T) {
 func TestIncremental(t *testing.T) {
 	for _, elem := range data {
 		h32 := New32(seed)
-		h128 := New128()
+		h128 := New128(seed64, seed64)
 		for i, j, k := 0, 0, len(elem.s); i < k; i = j {
 			j = 2*i + 3
 			if j > k {
@@ -86,7 +87,7 @@ func bench32(b *testing.B, length int) {
 	b.SetBytes(int64(length))
 	b.ResetTimer()
 	for i := 0; i < b.N; i++ {
-		Sum32(buf)
+		Sum32(buf, seed)
 	}
 }
 

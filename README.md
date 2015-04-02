@@ -4,6 +4,6 @@
 
 go-datasketch gives you probabilistic data structures that can process vary large amount of data super fast, with little loss of accuracy.
 
-Also see the [Python version](https://github.com/ekzhu/datasketch). Both uses 
-the same serialization format. So you can easily use the serialized data 
+Also see the [Python version](https://github.com/ekzhu/datasketch). Both use 
+the same serialization format. So you can easily use the serialized data
 sketches made by the Python version.

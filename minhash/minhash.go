@@ -10,9 +10,9 @@
 package minhash
 
 import (
+	"encoding/binary"
 	"errors"
 	"math"
-	"math/big"
 	"math/rand"
 )
 
@@ -22,27 +22,8 @@ type Hash32 interface {
 }
 
 const (
-	// The maximum size (in bit) for the 1-bit minhash
-	bitArraySize  = 128
-	onebitMask    = uint32(0x1)
 	mersennePrime = (1 << 61) - 1
 )
-
-func popCount(bits uint32) uint32 {
-	bits = (bits & 0x55555555) + (bits >> 1 & 0x55555555)
-	bits = (bits & 0x33333333) + (bits >> 2 & 0x33333333)
-	bits = (bits & 0x0f0f0f0f) + (bits >> 4 & 0x0f0f0f0f)
-	bits = (bits & 0x00ff00ff) + (bits >> 8 & 0x00ff00ff)
-	return (bits & 0x0000ffff) + (bits >> 16 & 0x0000ffff)
-}
-
-func popCountBig(bits *big.Int) int {
-	result := 0
-	for _, v := range bits.Bytes() {
-		result += int(popCount(uint32(v)))
-	}
-	return result
-}
 
 // http://en.wikipedia.org/wiki/Universal_hashing
 type permutation func(uint32) uint32
@@ -90,6 +71,13 @@ func New(seed int64, numPerm int) (*MinHash, error) {
 	return s, nil
 }
 
+// Clear sets the MinHash back to initial state
+func (sig *MinHash) Clear() {
+	for i := range sig.HashValues {
+		sig.HashValues[i] = math.MaxUint32
+	}
+}
+
 // Digest consumes a 32-bit hash and then computes all permutations and retains
 // the minimum value for each permutations.
 // Using a good hash function is decisive in estimation accuracy. See
@@ -106,19 +94,82 @@ func (sig *MinHash) Digest(item Hash32) {
 	}
 }
 
-// EstimateJaccard computes the estimation of Jaccard Similarity among
+// Merge takes another MinHash and combines it with MinHash sig,
+// making sig the union of both.
+func (sig *MinHash) Merge(other *MinHash) error {
+	if sig.Seed != other.Seed {
+		return errors.New("Cannot merge MinHashs with different seed.")
+	}
+	for i, v := range other.HashValues {
+		if v < sig.HashValues[i] {
+			sig.HashValues[i] = v
+		}
+	}
+	return nil
+}
+
+// ByteSize returns the size of the serialized object.
+func (sig *MinHash) ByteSize() int {
+	return 8 + 4 + 4*len(sig.HashValues)
+}
+
+// Serialize the MinHash signature to bytes stored in buffer
+func (sig *MinHash) Serialize(buffer []byte) error {
+	if len(buffer) < sig.ByteSize() {
+		return errors.New("The buffer does not have enough space to " +
+			"hold the MinHash signature.")
+	}
+	b := binary.LittleEndian
+	b.PutUint64(buffer, uint64(sig.Seed))
+	b.PutUint32(buffer[8:], uint32(len(sig.HashValues)))
+	offset := 8 + 4
+	for _, v := range sig.HashValues {
+		b.PutUint32(buffer[offset:], v)
+		offset += 4
+	}
+	return nil
+}
+
+// Deserialize reconstructs a MinHash signature from the buffer
+func Deserialize(buffer []byte) (*MinHash, error) {
+	if len(buffer) < 12 {
+		return nil, errors.New("The buffer does not contain enough bytes to " +
+			"reconstruct a MinHash.")
+	}
+	b := binary.LittleEndian
+	seed := int64(b.Uint64(buffer))
+	numPerm := int(b.Uint32(buffer[8:]))
+	offset := 12
+	if len(buffer[offset:]) < numPerm {
+		return nil, errors.New("The buffer does not contain enough bytes to " +
+			"reconstruct a MinHash.")
+	}
+	m, err := New(seed, numPerm)
+	if err != nil {
+		return nil, err
+	}
+	for i := range m.HashValues {
+		m.HashValues[i] = b.Uint32(buffer[offset:])
+		offset += 4
+	}
+	return m, nil
+}
+
+// Jaccard computes the estimation of Jaccard Similarity among
 // MinHash signatures.
-func EstimateJaccard(sigs ...*MinHash) (float64, error) {
-	if sigs == nil || len(sigs) == 0 {
+func Jaccard(sigs ...*MinHash) (float64, error) {
+	if sigs == nil || len(sigs) < 2 {
 		return 0.0, errors.New("Less than 2 MinHash signatures were given")
 	}
 	numPerm := len(sigs[0].Permutations)
 	for _, sig := range sigs[1:] {
 		if sigs[0].Seed != sig.Seed {
-			return 0.0, errors.New("Cannot compare MinHash signatures with different seed")
+			return 0.0, errors.New("Cannot compare MinHash signatures with " +
+				"different seed")
 		}
 		if numPerm != len(sig.Permutations) {
-			return 0.0, errors.New("Cannot compare MinHash signatures with different numbers of permutations")
+			return 0.0, errors.New("Cannot compare MinHash signatures with " +
+				"different numbers of permutations")
 		}
 	}
 	intersection := 0
@@ -134,61 +185,4 @@ func EstimateJaccard(sigs ...*MinHash) (float64, error) {
 		intersection += currRowAgree
 	}
 	return float64(intersection) / float64(numPerm), nil
-}
-
-// OneBitMinHash signature.
-// For b-Bit MinHash see:
-// http://research.microsoft.com/pubs/120078/wfc0398-lips.pdf
-// This is the 1-bit signature that can be used to compute
-// similarity with other 1-bit signatures.
-// Using signature incurs some loss of precision, but reduced storage cost.
-// Usually a good idea to use this when the actual Jaccard is > 0.5.
-type OneBitMinHash struct {
-	Size     int
-	BitArray *big.Int
-	Seed     int64
-}
-
-// ExportOneBit exports the full MinHash signature to OneBitMinHash.
-// Keeping only the lowest bit of every hash value.
-// If the number of hash permutation functions exceeds
-// the maximum size of the bit array `bitArraySize`,
-// only the first
-// `bitArraySize` number of hash values will be exported.
-func (sig *MinHash) ExportOneBit() *OneBitMinHash {
-	var numExportedHashValues int
-	if len(sig.Permutations) > bitArraySize {
-		numExportedHashValues = bitArraySize
-	} else {
-		numExportedHashValues = len(sig.Permutations)
-	}
-	sigOneBit := OneBitMinHash{
-		BitArray: big.NewInt(0),
-		Seed:     sig.Seed,
-		Size:     numExportedHashValues,
-	}
-	for i := 0; i < numExportedHashValues; i++ {
-		sigOneBit.BitArray.SetBit(sigOneBit.BitArray, i, uint(sig.HashValues[i]&onebitMask))
-	}
-	return &sigOneBit
-}
-
-// EstimateJaccardOneBit estimates Jaccard similarity of OneBitMinHash signatures
-func EstimateJaccardOneBit(sigs ...*OneBitMinHash) (float64, error) {
-	if sigs == nil || len(sigs) == 0 {
-		return 0.0, errors.New("Less than 2 OneBitMinHash signatures were given")
-	}
-	for _, sig := range sigs[1:] {
-		if sigs[0].Seed != sig.Seed {
-			return 0.0, errors.New("Cannot compare OneBitMinHash signatures with different seed")
-		}
-		if sigs[0].Size != sig.Size {
-			return 0.0, errors.New("Cannot compare OneBitMinHash signatures with different numbers of permutations")
-		}
-	}
-	commonBits := big.NewInt(0)
-	for _, sig := range sigs {
-		commonBits.Xor(commonBits, sig.BitArray)
-	}
-	return 2.0 * (float64((sigs[0].Size-popCountBig(commonBits)))/float64(sigs[0].Size) - 0.5), nil
 }
