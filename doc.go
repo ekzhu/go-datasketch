@@ -1,5 +1,4 @@
 /*
-streamsimilarity is a library for computing similarity measures in
-big data sets, with the magic of data sketches.
+Probabilistic data structures for processing very large datasets
 */
-package sketchsimilarity
+package datasketch

@@ -1,3 +1,3 @@
-package sketchsimilarity
+package datasketch
 
 const Version = "development"
