@@ -219,19 +219,19 @@ func TestHLLUnionCount(t *testing.T) {
 	}
 }
 
-func TestHLLJaccard(t *testing.T) {
+func TestHLLIntersectionCount(t *testing.T) {
 	h1, _ := New(4)
 	h1.Digest(fakeHash32(0x00ffffff))
-	h1.Digest(fakeHash32(0x10ffabc0))
 	h2, _ := New(4)
-	h2.Digest(fakeHash32(0x00111111))
-	h2.Digest(fakeHash32(0x1abcdef0))
-
-	j, err := Jaccard(h1, h2)
+	h2.Digest(fakeHash32(0x00ffffff))
+	i, err := IntersectionCount(h1, h2)
 	if err != nil {
 		t.Error(err)
 	}
-	if j > 1.0 {
-		t.Error(j)
+	h1c := h1.Count()
+	h1.Merge(h2)
+	i2 := h1c + h2.Count() - h1.Count()
+	if i != i2 {
+		t.Error(i)
 	}
 }

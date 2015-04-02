@@ -1,11 +1,9 @@
 // Package hyperloglog implements a probabilistic data structure for estimating
-// cardinality and similarity.
+// cardinality.
 // HyperLogLog is described here:
 // http://algo.inria.fr/flajolet/Publications/FlFuGaMe07.pdf.
-// The code is shamelessly copied (with some modification) from
+// The code is shamelessly modified based on
 // https://github.com/clarkduvall/hyperloglog.
-// Jaccard similarity measure is computed using Inclusion-Exclusion
-// principle.
 package hyperloglog
 
 import (
@@ -157,10 +155,11 @@ func UnionCount(hlls ...*HyperLogLog) (float64, error) {
 	return float64(-uint64(two32 * math.Log(1-est/two32))), nil
 }
 
-// Jaccard returns the Jaccard similarity of the two HyperLogLogs
-// using Inclusion-Exclusion principle.
+// IntersectionCount returns the cardinality estimation of the intersection
+// of the two HyperLogLogs.
+// This uses the Inclusion-Exclusion Principle.
 // The value may be negative due to cardinality estimation error
-func Jaccard(h1, h2 *HyperLogLog) (float64, error) {
+func IntersectionCount(h1, h2 *HyperLogLog) (float64, error) {
 	u, err := UnionCount(h1, h2)
 	if err != nil {
 		return 0.0, nil
@@ -168,5 +167,5 @@ func Jaccard(h1, h2 *HyperLogLog) (float64, error) {
 	if u == 0.0 {
 		return 1.0, nil
 	}
-	return (h1.Count() + h2.Count() - u) / u, nil
+	return (h1.Count() + h2.Count() - u), nil
 }
