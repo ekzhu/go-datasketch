@@ -162,10 +162,38 @@ func UnionCount(hlls ...*HyperLogLog) (float64, error) {
 func IntersectionCount(h1, h2 *HyperLogLog) (float64, error) {
 	u, err := UnionCount(h1, h2)
 	if err != nil {
-		return 0.0, nil
+		return 0.0, err
+	}
+	return (h1.Count() + h2.Count() - u), nil
+}
+
+// Jaccard returns the estimated Jaccard similarity between the two HyperLogLogs.
+// The value may be negative due to cardinality estimation error
+func Jaccard(h1, h2 *HyperLogLog) (float64, error) {
+	u, err := UnionCount(h1, h2)
+	if err != nil {
+		return 0.0, err
 	}
 	if u == 0.0 {
 		return 1.0, nil
 	}
-	return (h1.Count() + h2.Count() - u), nil
+	ic := h1.Count() + h2.Count() - u
+	return ic / u, nil
+}
+
+// Inclusion returns the estimated inclusion score of h1 against h2.
+// It measures the fraction of the multiset counted by h1
+// overlapping with the multiset counted by h2.
+// The value may be negative due to estimation error.
+func Inclusion(h1, h2 *HyperLogLog) (float64, error) {
+	u, err := UnionCount(h1, h2)
+	if err != nil {
+		return 0.0, err
+	}
+	if u == 0.0 {
+		return 1.0, nil
+	}
+	c := h1.Count()
+	ic := c + h2.Count() - u
+	return ic / c, nil
 }

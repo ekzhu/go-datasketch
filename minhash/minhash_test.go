@@ -7,8 +7,8 @@ type fakeHash32 uint32
 func (f fakeHash32) Sum32() uint32 { return uint32(f) }
 
 func TestMinHash(t *testing.T) {
-	m1, _ := New(1, 128)
-	m2, _ := New(1, 128)
+	m1, _ := New(128, 1)
+	m2, _ := New(128, 1)
 
 	m1.Digest(fakeHash32(0x00010fff))
 	m2.Digest(fakeHash32(0x00010fff))
@@ -18,7 +18,7 @@ func TestMinHash(t *testing.T) {
 		t.Error(est)
 	}
 
-	m3, _ := New(1, 128)
+	m3, _ := New(128, 1)
 	m3.Digest(fakeHash32(0x00010fff))
 	m2.Digest(fakeHash32(0x01001fff))
 	est, _ = Jaccard(m1, m2, m3)
@@ -28,8 +28,8 @@ func TestMinHash(t *testing.T) {
 }
 
 func TestMinHashClear(t *testing.T) {
-	m1, _ := New(1, 128)
-	m2, _ := New(1, 128)
+	m1, _ := New(128, 1)
+	m2, _ := New(128, 1)
 
 	m1.Digest(fakeHash32(0x00010fff))
 	m2.Digest(fakeHash32(0x00010fff))
@@ -43,7 +43,7 @@ func TestMinHashClear(t *testing.T) {
 }
 
 func TestMinHashSerialization(t *testing.T) {
-	m, _ := New(1, 4)
+	m, _ := New(4, 1)
 	m.Digest(fakeHash32(0x00010fff))
 	m.Digest(fakeHash32(0x02010fff))
 	buf := make([]byte, m.ByteSize())
@@ -74,14 +74,14 @@ func TestMinHashError(t *testing.T) {
 		t.Error("should return error if number of permutations is set to 0")
 	}
 
-	m1, _ := New(1, 128)
-	m2, _ := New(2, 128)
+	m1, _ := New(128, 1)
+	m2, _ := New(128, 2)
 	_, err = Jaccard(m1, m2)
 	if err == nil {
 		t.Error("should return error if seeds don't match")
 	}
 
-	m3, _ := New(1, 256)
+	m3, _ := New(256, 1)
 	_, err = Jaccard(m1, m3)
 	if err == nil {
 		t.Error("should return error if number of permutations don't match")

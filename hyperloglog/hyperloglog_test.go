@@ -235,3 +235,39 @@ func TestHLLIntersectionCount(t *testing.T) {
 		t.Error(i)
 	}
 }
+
+func TestHLLJaccard(t *testing.T) {
+	h1, _ := New(4)
+	h1.Digest(fakeHash32(0x00ffffff))
+	h2, _ := New(4)
+	h2.Digest(fakeHash32(0x00ffffff))
+	i, err := Jaccard(h1, h2)
+	if err != nil {
+		t.Error(err)
+	}
+	h1c := h1.Count()
+	h1.Merge(h2)
+	i2 := (h1c + h2.Count() - h1.Count()) / h1.Count()
+	if i != i2 {
+		t.Error(i)
+	}
+}
+
+func TestHLLInclusion(t *testing.T) {
+	h1, _ := New(4)
+	h1.Digest(fakeHash32(0x00ffffff))
+	h2, _ := New(4)
+	h2.Digest(fakeHash32(0x00ffffff))
+	h2.Digest(fakeHash32(0x00fffff1))
+	h2.Digest(fakeHash32(0x00fffff5))
+	i, err := Inclusion(h1, h2)
+	if err != nil {
+		t.Error(err)
+	}
+	h1c := h1.Count()
+	h1.Merge(h2)
+	i2 := (h1c + h2.Count() - h1.Count()) / h1c
+	if i != i2 {
+		t.Error(i)
+	}
+}

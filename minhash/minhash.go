@@ -47,7 +47,7 @@ type MinHash struct {
 // be generated.
 // Higher number of permutations results in better estimation,
 // but reduces performance. 128 is a good number to start.
-func New(seed int64, numPerm int) (*MinHash, error) {
+func New(numPerm int, seed int64) (*MinHash, error) {
 	if numPerm <= 0 {
 		return nil, errors.New("Cannot have non-positive number of permutations")
 	}
@@ -144,7 +144,7 @@ func Deserialize(buffer []byte) (*MinHash, error) {
 		return nil, errors.New("The buffer does not contain enough bytes to " +
 			"reconstruct a MinHash.")
 	}
-	m, err := New(seed, numPerm)
+	m, err := New(numPerm, seed)
 	if err != nil {
 		return nil, err
 	}
